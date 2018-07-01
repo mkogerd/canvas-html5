@@ -17,6 +17,13 @@ const mouse = {
 	y: undefined
 };
 
+const control = {
+	up: false,
+	down: false,
+	left: false,
+	right: false
+}
+
 // Functions
 function distance(x1, y1, x2, y2) {
 	return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2))
@@ -30,6 +37,50 @@ window.addEventListener('mousemove', (event) => {
 window.addEventListener('resize', (event) => {
 	canvas.width = innerWidth;
 	canvas.height = innerHeight;
+});
+
+window.addEventListener('keydown', (event) => {
+	console.log(event);
+	switch(event.key) {
+		case 'ArrowUp':
+		control.up = true;
+		break;
+		
+		case 'ArrowDown':
+		control.down = true;
+		break;
+		
+		case 'ArrowLeft':
+		control.left = true;
+		break;
+
+		case 'ArrowRight':
+		control.right = true;
+		break;
+	}
+	console.log(control);
+});
+
+window.addEventListener('keyup', (event) => {
+	console.log(event);
+	switch(event.key) {
+		case 'ArrowUp':
+		control.up = false;
+		break;
+		
+		case 'ArrowDown':
+		control.down = false;
+		break;
+		
+		case 'ArrowLeft':
+		control.left = false;
+		break;
+
+		case 'ArrowRight':
+		control.right = false;
+		break;
+	}
+	console.log(control);
 });
 
 /**
@@ -140,6 +191,9 @@ function Particle(x, y, radius, color) {
 
 		this.x += this.velocity.x;
 		this.y += this.velocity.y;
+		let friction = 0.999;
+		this.velocity.x = this.velocity.x * friction;
+		this.velocity.y = this.velocity.y * friction;
 	}
 	
 	this.draw = () => {
@@ -156,12 +210,72 @@ function Particle(x, y, radius, color) {
 	}
 }
 
+function Player(x, y, radius, color) {
+	this.x = x;
+	this.y = y;
+	this.velocity = {
+		x: 0,
+		y: 0
+	};
+	this.radius = radius;
+	this.color = color;
+	this.mass = 1;
+	this.opacity = 0;
+
+	this.update = particles => {
+		
+		if(control.up) this.velocity.y += -.1;
+		if(control.down) this.velocity.y += .1;
+		if(control.right) this.velocity.x += .1;
+		if(control.left) this.velocity.x += -.1;
+		
+		// Particle collision
+		for (let i = 0; i < particles.length; i++) {
+			if (this == particles[i]) continue;
+			if (distance(this.x, this.y, particles[i].x, particles[i].y) - radius * 2 < 0) {
+				resolveCollision(this, particles[i]);
+			}
+		}	
+		
+		// Border collision
+		if (this.x - this.radius <= 0 || this.x + this.radius >= canvas.width) {
+			this.velocity.x = -this.velocity.x;
+		}
+		if (this.y - this.radius <= 0 || this.y + this.radius >= canvas.height) {
+			this.velocity.y = -this.velocity.y;
+		}
+
+		// Mouse collision
+		if (distance(mouse.x, mouse.y, this.x, this.y) < 120 && this.opacity < 0.4) {
+			this.opacity += 0.02;
+		} else if (this.opacity > 0) {
+			this.opacity -= 0.02;	
+			this.opacity = Math.max(0, this.opacity);
+		}
+		
+		this.x += this.velocity.x;
+		this.y += this.velocity.y;
+
+		this.draw();
+	}
+	
+	this.draw = () => {
+		c.beginPath();
+		c.arc(this.x, this.y, radius, 0, Math.PI * 2,  false);
+		c.fillStyle = this.color;
+		c.fill();
+		c.strokeStyle = this.color;
+		c.stroke();
+		c.closePath();
+	}
+}
+
 // Implementation
 let particles;
 
 function init() {
 	particles = [];
-	for (let i = 0; i < 250; i++) {
+	for (let i = 0; i < 100; i++) {
 		const radius = 15;
 		const color = colors[Math.floor(Math.random() * colors.length)];
 		let x = Math.random() * (canvas.width - radius * 2) + radius;
@@ -175,10 +289,11 @@ function init() {
 					j = -1;
 				}
 			}
+			particles.push(new Particle(x, y, radius, color));
+		} else {
+			particles.push(new Player(x, y, radius, 'red'));
 		}
-		particles.push(new Particle(x, y, radius, color));
 	}
-	console.log(particles);
 }
 
 function animate() {
