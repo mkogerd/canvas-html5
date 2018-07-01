@@ -6,7 +6,6 @@ canvas.height = innerHeight;
 var c = canvas.getContext('2d');
 
 // Set up variables
-
 var colors = [
 	'#5E005E',
 	'#AB2F52',
